@@ -1,0 +1,29 @@
+% Algorytm rozwiązujący równania postaci Ax=d, gdzie A to macierz trójdiagonalna
+%     [ ⋱ ⋱       ]
+%     [ ⋱ ⋱ c     ]
+% A = [   ⋱ b ⋱   ]
+%     [     a ⋱ ⋱ ]
+%     [       ⋱ ⋱ ]
+% b,d - nx1 vectors
+% a,c - n-1x1 vectors
+function sol = tdma(a,b,c,d)
+
+    % Dimension of the matrix A
+    n = length(b);
+    
+    sol = zeros(n,1);
+
+    % Forward sweep
+    for i = 2:n
+        w = a(i-1)/b(i-1);
+        b(i) = b(i) - w*c(i-1);
+        d(i) = d(i) - w*d(i-1);
+    end
+
+    % Backward substitution
+    sol(n) = d(n)/b(n);
+    for i = (n-1):(-1):1
+        sol(i) = (d(i)-c(i)*sol(i+1))/b(i);
+    end
+end
+

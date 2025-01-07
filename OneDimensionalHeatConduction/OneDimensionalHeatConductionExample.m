@@ -1,0 +1,66 @@
+% clear all
+% close all
+% clc
+
+% Defing the necessary parameters
+n = 5000;
+dx = 0.1*ones(n,1);
+temp = 100*ones(n,1);
+dt = 1;
+tol = 1e-12;
+max_iters = 1000;
+
+% Defining the functions governing the necessary properties
+function obj = k_f(obj)
+    arguments
+        obj (1,1) OneDimensionalHeatConductionSimulation
+    end
+    obj.k = 50*ones(obj.sim_size,1);
+end
+
+function obj = dcp_f(obj)
+    arguments
+        obj (1,1) OneDimensionalHeatConductionSimulation
+    end
+    obj.dcp = 50*ones(obj.sim_size,1);
+end
+
+function obj = q_f(obj)
+    arguments
+        obj (1,1) OneDimensionalHeatConductionSimulation
+    end
+    obj.q = 10*ones(obj.sim_size,1);
+end
+
+function obj = qt_f(obj)
+    arguments
+        obj (1,1) OneDimensionalHeatConductionSimulation
+    end
+    obj.qt = -0.0*ones(obj.sim_size,1);
+end
+
+% Creating the object
+sim = OneDimensionalHeatConductionSimulation(n, dx, temp, dt, tol, max_iters, @k_f, @dcp_f, @q_f, @qt_f);
+
+% Setting the boundary conditions
+sim = sim.set_neumann_boundary_condition(0, 100);
+sim = sim.set_dirichlet_boundary_condition(1,100);
+
+% Calculating the transient state and plotting the temperature
+figure(1);
+hold on
+for i = 1:100
+    sim = sim.unsteady(10);
+    sim.plot_temperature();
+end
+hold off
+
+% Plotting the error history
+figure(2);
+sim.plot_rel_change_history();
+
+% Calculating the steady state and plotting the temperature
+figure(3)
+sim = sim.steady();
+sim.plot_temperature()
+
