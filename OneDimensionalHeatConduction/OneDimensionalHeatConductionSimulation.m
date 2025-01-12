@@ -26,16 +26,16 @@ classdef OneDimensionalHeatConductionSimulation
         % aI, TI - coefficient and temperature of the neighbouring cell
         % b - constant
         % Boundaries are represented as [aB; aI; b]
-        left_boundary (3,1) double = [0; 1; 0]
-        right_boundary (3,1) double = [0; 1; 0]
+        left_boundary (3,1) double = [1; 0; 0]
+        right_boundary (3,1) double = [1; 0; 0]
 
         noi (1,1) {mustBeInteger, mustBeNonnegative}    % Number of performed iterations
         dt (1,1) double                                 % Timestep
         elapsed (1,1) double                            % Time elapsed since the beginning of the simulation
 
-        tol (1,1) double {mustBePositive} = 1e-7                % Error tolerance
-        max_iters (1,1) {mustBeInteger, mustBePositive} = 100   % The aximum number of iterations for given calculation
-        rel_change_history (:,1) double = zeros(10000,1)               % Vector storing the values of the errors for previous iterations
+        tol (1,1) double {mustBePositive} = 1e-7                % Residual tolerance
+        max_iters (1,1) {mustBeInteger, mustBePositive} = 100   % The maximum number of iterations for given calculation
+        residual_history (:,1) double = zeros(10000,1)          % Vector storing the values of the residuals for previous iterations
     end
     methods
         % Constructor method
@@ -97,27 +97,27 @@ classdef OneDimensionalHeatConductionSimulation
         % aE, TE - coefficient and temperature of the control volume east to the given one
         % b - constant
         % Coefficient matrix holds those values as colums in the following
-        % order: [aW aE aP b]
+        % order: [aP aW aE b]
         function coeff = get_coefficients_steady(obj)
             % Preallocating the matrix
             coeff = zeros(obj.sim_size, 4);
             % aW
-            coeff(2:end-1,1) = 2*(obj.dx(1:end-2)./obj.k(1:end-2)+obj.dx(2:end-1)./obj.k(2:end-1)).^(-1);
+            coeff(2:end-1,2) = 2*(obj.dx(1:end-2)./obj.k(1:end-2)+obj.dx(2:end-1)./obj.k(2:end-1)).^(-1);
             % aE
-            coeff(2:end-1,2) = 2*(obj.dx(2:end-1)./obj.k(2:end-1)+obj.dx(3:end)./obj.k(3:end)).^(-1);
+            coeff(2:end-1,3) = 2*(obj.dx(2:end-1)./obj.k(2:end-1)+obj.dx(3:end)./obj.k(3:end)).^(-1);
             % aP
-            coeff(2:end-1,3) = coeff(2:end-1,1)+coeff(2:end-1,2)-obj.qt(2:end-1).*obj.dx(2:end-1);
+            coeff(2:end-1,1) = coeff(2:end-1,2)+coeff(2:end-1,3)-obj.qt(2:end-1).*obj.dx(2:end-1);
             % b
             coeff(2:end-1,4) = obj.q(2:end-1).*obj.dx(2:end-1);
 
             % Left boundary
-            coeff(1,2) = obj.left_boundary(1);
+            coeff(1,1) = obj.left_boundary(1);
             coeff(1,3) = obj.left_boundary(2);
             coeff(1,4) = obj.left_boundary(3);
 
             % Right boundary
             coeff(end,1) = obj.right_boundary(1);
-            coeff(end,3) = obj.right_boundary(2);
+            coeff(end,2) = obj.right_boundary(2);
             coeff(end,4) = obj.right_boundary(3);
         end
 
@@ -127,29 +127,32 @@ classdef OneDimensionalHeatConductionSimulation
             % Preallocating the matrix
             coeff = zeros(obj.sim_size, 4);
             % aW
-            coeff(2:end-1,1) = 2*(obj.dx(1:end-2)./obj.k(1:end-2)+obj.dx(2:end-1)./obj.k(2:end-1)).^(-1);
+            coeff(2:end-1,2) = 2*(obj.dx(1:end-2)./obj.k(1:end-2)+obj.dx(2:end-1)./obj.k(2:end-1)).^(-1);
             % aE
-            coeff(2:end-1,2) = 2*(obj.dx(2:end-1)./obj.k(2:end-1)+obj.dx(3:end)./obj.k(3:end)).^(-1);
+            coeff(2:end-1,3) = 2*(obj.dx(2:end-1)./obj.k(2:end-1)+obj.dx(3:end)./obj.k(3:end)).^(-1);
             % b
             coeff(2:end-1,4) = obj.q(2:end-1).*obj.dx(2:end-1)+old_dcp(2:end-1).*obj.dx(2:end-1)/obj.dt.*old_temps(2:end-1);
             % aP
-            coeff(2:end-1,3) = coeff(2:end-1,1)+coeff(2:end-1,2)+obj.dcp(2:end-1).*obj.dx(2:end-1)/obj.dt-obj.qt(2:end-1).*obj.dx(2:end-1);
+            coeff(2:end-1,1) = coeff(2:end-1,2)+coeff(2:end-1,3)+obj.dcp(2:end-1).*obj.dx(2:end-1)/obj.dt-obj.qt(2:end-1).*obj.dx(2:end-1);
 
             % Left boundary
-            coeff(1,2) = obj.left_boundary(1);
+            coeff(1,1) = obj.left_boundary(1);
             coeff(1,3) = obj.left_boundary(2);
             coeff(1,4) = obj.left_boundary(3);
 
             % Right boundary
             coeff(end,1) = obj.right_boundary(1);
-            coeff(end,3) = obj.right_boundary(2);
+            coeff(end,2) = obj.right_boundary(2);
             coeff(end,4) = obj.right_boundary(3);
         end
         
-        % Calculates the relative change between the old and new
-        % temperature. 
-        function rel_change = calculate_relative_change(obj, new_temp)
-            rel_change = norm(obj.temp-new_temp)/norm(obj.temp);
+        % Calculates the residual. 
+        function res = calculate_residual(obj, coeff)
+            % r = aW*TW+aE*TE+b-aP*TP
+            res_vector = coeff(:,2).*[0; obj.temp(1:end-1)] + coeff(:,3).*[obj.temp(2:end); 0] + coeff(:,4) - coeff(:,1).*obj.temp;
+            scaling_factor = norm(coeff(1,:).*obj.temp,1);
+            
+            res = norm(res_vector,1)/scaling_factor;
         end
 
         % Updates each of the following properties:
@@ -165,6 +168,10 @@ classdef OneDimensionalHeatConductionSimulation
             % Number of iterations before calculations
             noi_start=obj.noi;
 
+            % Recalculating the physical properties and calculating coefficients
+            obj = obj.update_properties();
+            coeff = obj.get_coefficients_steady();
+            
             % Calculations are performed while the number of iterations is
             % smaller than the limit
             while obj.noi-noi_start<obj.max_iters
@@ -172,25 +179,23 @@ classdef OneDimensionalHeatConductionSimulation
                 % Incrementing the number of iterations
                 obj.noi=obj.noi+1;
 
-                % Recalculating the physical properties
-                obj = obj.update_properties();
-
                 % Assigning the coefficients to the vectors for the solver
-                coeff = obj.get_coefficients_steady();
-                a = -coeff(2:end,1);
-                b = coeff(1:end,3);
-                c = -coeff(1:end-1,2);
+                a = -coeff(2:end,2);
+                b = coeff(1:end,1);
+                c = -coeff(1:end-1,3);
                 d = coeff(1:end,4);
                 
-                % Calculating the solution
-                new_temp = tdma(a,b,c,d);
+                % Calculating the solution and updating the temperature
+                obj.temp = tdma(a,b,c,d);
     
-                % Calculating relative change and checking convergence
-                obj.rel_change_history(obj.noi) = obj.calculate_relative_change(new_temp);
-                converged = obj.rel_change_history(obj.noi)<obj.tol;
+                % Recalculating the physical properties and calculating new
+                % coefficients
+                obj = obj.update_properties();
+                coeff = obj.get_coefficients_steady();
 
-                % Updating the temperature
-                obj.temp = new_temp;
+                % Calculating residuals and checking convergence
+                obj.residual_history(obj.noi) = obj.calculate_residual(coeff);
+                converged = obj.residual_history(obj.noi)<obj.tol;
 
                 if converged
                     break
@@ -219,6 +224,10 @@ classdef OneDimensionalHeatConductionSimulation
                 old_dcp = obj.dcp;
                 old_temp = obj.temp;
 
+                % Recalculating the physical properties and calculating coefficients
+                obj = obj.update_properties();
+                coeff = obj.get_coefficients_unsteady(old_temp, old_dcp);
+
                 % Calculations are performed while the number of iterations is
                 % smaller than the limit
                 while obj.noi-noi_start<obj.max_iters
@@ -226,25 +235,23 @@ classdef OneDimensionalHeatConductionSimulation
                     % Incrementing the number of iterations
                     obj.noi = obj.noi+1;
 
-                    % Recalculating the physical properties
-                    obj = obj.update_properties();
-
                     % Assigning the coefficients to the vectors for the solver
-                    coeff = obj.get_coefficients_unsteady(old_temp, old_dcp);
-                    a = -coeff(2:end,1);
-                    b = coeff(1:end,3);
-                    c = -coeff(1:end-1,2);
+                    a = -coeff(2:end,2);
+                    b = coeff(1:end,1);
+                    c = -coeff(1:end-1,3);
                     d = coeff(1:end,4);
                     
-                    % Calculating the solution
-                    new_temp = tdma(a,b,c,d);
+                    % Calculating the solution and updating the temperature
+                    obj.temp = tdma(a,b,c,d);
         
-                    % Calculating relative change and checking convergence
-                    obj.rel_change_history(obj.noi) = obj.calculate_relative_change(new_temp);
-                    converged = obj.rel_change_history(obj.noi)<obj.tol;
+                    % Recalculating the physical properties and calculating new
+                    % coefficients
+                    obj = obj.update_properties();
+                    coeff = obj.get_coefficients_unsteady(old_temp,old_dcp);
     
-                    % Updating the temperature
-                    obj.temp = new_temp;
+                    % Calculating residuals and checking convergence
+                    obj.residual_history(obj.noi) = obj.calculate_residual(coeff);
+                    converged = obj.residual_history(obj.noi)<obj.tol;
     
                     if converged
                         break
@@ -253,18 +260,18 @@ classdef OneDimensionalHeatConductionSimulation
             end
         end
 
-        % Displays the relative change history
-        function plot_rel_change_history(obj)
-            semilogy(1:obj.noi,obj.rel_change_history(1:obj.noi)+1e-20);
-            ylabel("Relative change");
+        % Displays the residual history
+        function plot_residual_history(obj)
+            semilogy(1:obj.noi,obj.residual_history(1:obj.noi)+1e-24);
+            ylabel("Residual");
             xlabel("Iteration");
         end
 
-        % Deletes the relative change history
-        function obj = delete_rel_change_history(obj)
+        % Deletes the residual history
+        function obj = delete_residual_history(obj)
             obj.noi = 0;
             obj.elapsed = 0;
-            obj.rel_change_history = zeros(10000,1);
+            obj.residual_history = zeros(10000,1);
         end
     
         % Displays the temperature
@@ -291,9 +298,9 @@ classdef OneDimensionalHeatConductionSimulation
                 temperature (1,1) double
             end
             if boundary_side == 0
-                obj.left_boundary = [0; 1; temperature];
+                obj.left_boundary = [1; 0; temperature];
             elseif boundary_side == 1
-                obj.right_boundary = [0; 1; temperature];
+                obj.right_boundary = [1; 0; temperature];
             else
                 error(['The boundary argument has to be either 0 or 1', newline, ...
                     '0 represents the left boundary and 1 represents the right one']);
@@ -310,12 +317,12 @@ classdef OneDimensionalHeatConductionSimulation
                 aI = 2/(obj.dx(1)/obj.k(1)+obj.dx(2)/obj.k(2));
                 aB = aI-obj.qt(1)*obj.dx(1);
                 b = obj.q(1)*obj.dx(1)+heat_flux;
-                obj.left_boundary = [aI; aB; b];
+                obj.left_boundary = [aB; aI; b];
             elseif boundary_side == 1
-                aI = 2/(obj.dx(1)/obj.k(1)+obj.dx(2)/obj.k(2));
-                aB = aI-obj.qt(1)*obj.dx(1);
-                b = obj.q(1)*obj.dx(1)-heat_flux;
-                obj.right_boundary = [aI; aB; b];
+                aI = 2/(obj.dx(end)/obj.k(end)+obj.dx(end-1)/obj.k(end-1));
+                aB = aI-obj.qt(end)*obj.dx(end);
+                b = obj.q(end)*obj.dx(end)-heat_flux;
+                obj.right_boundary = [aB; aI; b];
             else
                 error(['The boundary argument has to be either 0 or 1', newline, ...
                     '0 represents the left boundary and 1 represents the right one']);
@@ -333,12 +340,12 @@ classdef OneDimensionalHeatConductionSimulation
                 aI = 2/(obj.dx(1)/obj.k(1)+obj.dx(2)/obj.k(2));
                 aB = aI-obj.qt(1)*obj.dx(1)+heat_transfer_coefficient;
                 b = obj.q(1)*obj.dx(1)+heat_transfer_coefficient*fluid_temperature;
-                obj.left_boundary = [aI; aB; b];
+                obj.left_boundary = [aB; aI; b];
             elseif boundary_side == 1
-                aI = 2/(obj.dx(1)/obj.k(1)+obj.dx(2)/obj.k(2));
-                aB = aI-obj.qt(1)*obj.dx(1)-heat_transfer_coefficient;
-                b = obj.q(1)*obj.dx(1)-heat_transfer_coefficient*fluid_temperature;
-                obj.right_boundary = [aI; aB; b];
+                aI = 2/(obj.dx(end)/obj.k(end)+obj.dx(end-1)/obj.k(end-1));
+                aB = aI-obj.qt(end)*obj.dx(end)-heat_transfer_coefficient;
+                b = obj.q(end)*obj.dx(end)-heat_transfer_coefficient*fluid_temperature;
+                obj.right_boundary = [aB; aI; b];
             else
                 error(['The boundary argument has to be either 0 or 1', newline, ...
                     '0 represents the left boundary and 1 represents the right one']);
