@@ -16,6 +16,8 @@ dx = (L/(n-1))*ones(n,1);   % Length of each of the control volumes
 % This formulation will be changed later so that boundary conditions will
 % be given for the boundary faces
 
+dt = 0.5;
+
 cp = 4200;                  % Heat capacity
 k = 20;                     % Thermal conductivity
 rho = 1000;                 % Density
@@ -53,7 +55,8 @@ function obj = v_f(obj, v)
 end
 
 % Creating the object
-sim = OneDimensionalHeatTransferSimulation(n, dx, temp, cp, dt, tol, max_iters, @(obj) k_f(obj,k), @(obj) rho_f(obj,rho), @(obj) q_f(obj, q), @(obj) qt_f(obj, qt), @(obj) v_f(obj, v));
+sim = OneDimensionalHeatTransferSimulation(n, dx, temp, cp, dt, tol, max_iters, ...
+    @(obj) k_f(obj,k), @(obj) rho_f(obj,rho), @(obj) q_f(obj, q), @(obj) qt_f(obj, qt), @(obj) v_f(obj, v));
 
 % Setting the boundary conditions
 sim = sim.set_dirichlet_boundary_condition(0, 0);
