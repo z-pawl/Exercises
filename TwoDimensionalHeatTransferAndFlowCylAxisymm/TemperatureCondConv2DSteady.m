@@ -94,7 +94,7 @@ classdef TemperatureCondConv2DSteady < IComponent
                 % between control volumes along x and y axis respectively
                 % (for example Fx(1,1) is a value for the interface between the control volumes with indexes (1,1) and (2,1) respectively)
 
-                % Flow rate through the cell face: F = rho*v*A
+                % Flow rate through the cell face: F = rho*cp*v*A
                 % The density and the heat capacity are lineary interpolated using the properties of neighbouring cells
                 % The velocity is taken as the velocity at the cell face
                 % A - area of the cell face
@@ -108,15 +108,12 @@ classdef TemperatureCondConv2DSteady < IComponent
                     .* obj.velocity.vr .* area_r;
 
 
-
-                % Conductance: D =  (k/cp)/dx*A
+                % Conductance: D =  k/dx*A
                 % dx - distance between the centers of neighbouring cells
 
-                Dx = Utilities.interpolate_center2faces(obj.k,obj.grid.dx,1) ...
-                    ./ (Utilities.interpolate_center2faces(obj.cp,obj.grid.dx,1) .* obj.grid.dx_stag) .* area_x;
+                Dx = Utilities.interpolate_center2faces(obj.k,obj.grid.dx,1) ./ obj.grid.dx_stag .* area_x;
 
-                Dr = Utilities.interpolate_center2faces(obj.k,obj.grid.dr,2) ...
-                    ./ (Utilities.interpolate_center2faces(obj.cp,obj.grid.dr,2) .* obj.grid.dr_stag) .* area_r;
+                Dr = Utilities.interpolate_center2faces(obj.k,obj.grid.dr,2) ./ obj.grid.dr_stag .* area_r;
 
                 % Function A(|P|) calculated using the power law scheme
                 Ax = (1-0.1*abs(Fx./Dx)).^5;

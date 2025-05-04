@@ -258,8 +258,6 @@ classdef Velocity2DSIMPLE < IComponent
             % Preallocating the coefficient matrix
             coeff = zeros([(obj.sz) 6]);
 
-            % A column and a row of zeros used to pad the data in order to make sure that there is no index out of bounds error
-
             area_x = 2*pi*obj.grid.dr.*obj.grid.pos_cent_r;
             area_r = 2*pi*obj.grid.dx.*obj.grid.pos_stag_r;
 
@@ -292,6 +290,42 @@ classdef Velocity2DSIMPLE < IComponent
             coeff(:,:,6)=(rho_vx_A(1:end-1,:)-rho_vx_A(2:end,:))+(rho_vr_A(:,1:end-1)-rho_vr_A(:,2:end));
 
             coeff=obj.apply_boundary_conditions_p_corr(coeff);
+
+            % area_x_faces = 2*pi*obj.grid.dr.*obj.grid.pos_cent_r;
+            % area_r_faces = 2*pi*obj.grid.dx.*obj.grid.pos_stag_r;
+
+            % area_x_stag_faces = 2*pi*obj.grid.dr.*obj.grid.pos_cent_r;
+            % area_r_stag_faces = 2*pi*obj.grid.dx.*[obj.grid.pos_stag_r(1,1) obj.grid.pos_cent_r obj.grid.pos_stag_r(1,end)];
+
+            % % Density interpolated to the cell faces along the x direction
+            % rho_int_x = Utilities.interpolate_center2faces(obj.rho, obj.grid.dx, 1);
+                
+            % % Density interpolated to the cell faces along the r direction
+            % rho_int_r = Utilities.interpolate_center2faces(obj.rho, obj.grid.dr, 2);
+
+            % % aE = rho_e*d_e*A_e=rho_e*A_E*A_e/(aP_vx_e) = temp_x*A_E;
+            % temp_x=rho_int_x.*area_x_faces./coeff_vx_aP;
+            % temp_r=rho_int_r.*area_r_faces./coeff_vy_aP;
+
+            % % Hence
+            % % aW
+            % coeff(:,:,1)=temp_x(1:end-1,:).*area_x_stag_faces;
+            % % aE
+            % coeff(:,:,2)=temp_x(2:end,:).*area_x_stag_faces;
+            % % aS
+            % coeff(:,:,3)=temp_r(:,1:end-1).*area_r_stag_faces(:,1:end-2);
+            % % aN
+            % coeff(:,:,4)=temp_r(:,2:end).*area_r_stag_faces(:,3:end);
+            % % aP
+            % coeff(:,:,5)=(temp_x(1:end-1,:)+temp_x(2:end,:)).*area_x_stag_faces+(temp_r(:,1:end-1)+temp_r(:,2:end)).*area_r_stag_faces(:,2:end-1);
+
+            % % b = ((rho*u*A)_w-(rho*u*A)_e)+((rho*v*A)_s-(rho*v*A)_n)
+            % rho_vx_A=rho_int_x.*vx_star.*area_x_faces;
+            % rho_vr_A=rho_int_r.*vr_star.*area_r_faces;
+
+            % coeff(:,:,6)=(rho_vx_A(1:end-1,:)-rho_vx_A(2:end,:))+(rho_vr_A(:,1:end-1)-rho_vr_A(:,2:end));
+
+            % coeff=obj.apply_boundary_conditions_p_corr(coeff);
         end
         function [A_delta_p_x, A_delta_p_r] = get_pressure_force(obj, p, is_pressure_correction)
             area_x = 2*pi*obj.grid.dr.*obj.grid.pos_cent_r;

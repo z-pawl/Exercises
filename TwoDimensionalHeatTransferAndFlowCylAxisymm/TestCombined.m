@@ -1,6 +1,6 @@
-sz=[450 75];
+sz=[150 30];
 
-dx=0.3*ones(sz(1),1)/sz(1);
+dx=2*ones(sz(1),1)/sz(1);
 dr=0.05*ones(1,sz(2))/sz(2);
 
 
@@ -8,7 +8,7 @@ grid = Grid2D(dx, dr, 1e-10);
 
 
 vel=Velocity2DSIMPLE(sz,0.0*ones(sz+[1 0]),zeros(sz+[0 1]),zeros(sz),@(x) 1000*ones(sz), @(x) 1e-3*ones(sz), ...
-    @(x) zeros(sz+[1 0]), @(x) zeros(sz+[1 0]), @(x) zeros(sz+[0 1]), @(x) zeros(sz+[0 1]), 1e-7, 1e-7, 0.85, 0.3);
+    @(x) zeros(sz+[1 0]), @(x) zeros(sz+[1 0]), @(x) zeros(sz+[0 1]), @(x) zeros(sz+[0 1]), 1e-7, 1e-7, 0.75, 0.2);
 
 vel.grid=grid;
 sim=Simulation2D;
@@ -49,10 +49,10 @@ temp.sim=sim;
 
 for i=1:sz(1)
     temp.set_boundary_conditions("north",i,[1,900,0]);
-    temp.set_boundary_conditions("south",i,[2,0,0]);
+    temp.set_boundary_conditions("south",i,[1,700,0]);
 end
 for i=1:sz(2)
-    temp.set_boundary_conditions("west",i,[1,700,0]);
+    temp.set_boundary_conditions("west",i,[1,800,0]);
     temp.set_boundary_conditions("east",i,[2,0,0]);
 end
 
