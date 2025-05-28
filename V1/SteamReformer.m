@@ -363,11 +363,11 @@ while ~a
         fprintf('The p residual is equal to: %d \n', vel_component.residual_history_p(sim.noi));
         fprintf('The T residual is equal to: %d \n', temp_component.residual_history(sim.noi));
 
-        fprintf('The H2 residual is equal to: %d \n', hydrogen.residual_history(sim.noi));
-        fprintf('The CO residual is equal to: %d \n', carbon_monoxide.residual_history(sim.noi));
-        fprintf('The CO2 residual is equal to: %d \n', carbon_dioxide.residual_history(sim.noi));
-        fprintf('The CH4 residual is equal to: %d \n', methane.residual_history(sim.noi));
-        fprintf('The H2O residual is equal to: %d \n\n', water.residual_history(sim.noi));
+        % fprintf('The H2 residual is equal to: %d \n', hydrogen.residual_history(sim.noi));
+        % fprintf('The CO residual is equal to: %d \n', carbon_monoxide.residual_history(sim.noi));
+        % fprintf('The CO2 residual is equal to: %d \n', carbon_dioxide.residual_history(sim.noi));
+        % fprintf('The CH4 residual is equal to: %d \n', methane.residual_history(sim.noi));
+        % fprintf('The H2O residual is equal to: %d \n\n', water.residual_history(sim.noi));
     end
     
     % Zatrzymywanie pętli, jeśli liczba iteracji przekracza dozwoloną wartość

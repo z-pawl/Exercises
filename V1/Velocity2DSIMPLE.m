@@ -263,7 +263,9 @@ classdef Velocity2DSIMPLE < IComponent
             % aN = Dn*A(|Pn|)+max(-Fn,0)
             coeff(:,:,4) = Dr(:,2:end).*Ar(:,2:end)-Fr(:,2:end).*(Fr(:,2:end)<0);
             % aP = aE+aW+aN+aS-SP*dx*dy
-            coeff(:,:,5) = coeff(:,:,1)+coeff(:,:,2)+coeff(:,:,3)+coeff(:,:,4)+obj.grid.pos_stag_r.*volume-obj.src_linr(:,:).*volume+(Fx(2:end,:)-Fx(1:end-1,:))+(Fr(:,2:end)-Fr(:,1:end-1));
+            coeff(:,:,5) = coeff(:,:,1)+coeff(:,:,2)+coeff(:,:,3)+coeff(:,:,4) ...
+                +Utilities.interpolate_center2faces(obj.visc, obj.grid.dr, 2).* volume./(obj.porosity .* obj.grid.pos_stag_r .^ 2) -obj.src_linr(:,:).*volume+(Fx(2:end,:) ...
+                -Fx(1:end-1,:))+(Fr(:,2:end)-Fr(:,1:end-1));
             % b = SC*dx*dy
             coeff(:,:,6) = obj.srcr(:,:).*volume;
 
